@@ -1,7 +1,7 @@
 # main.py
 
 # 👇 기능 클래스 import (구현은 각각 input/, output/, db/, web/ 에 작성 예정)
-from input.rfid_reader import RFIDReader
+from rfid.multi_reader import MultiRFIDReader   # ✅ 변경: 다중 리더기 지원
 from input.button import EventButton
 from output.tts import TTS
 from db.local_db import LocalDB
@@ -14,7 +14,7 @@ import time        # 루프 간 간격 설정용 sleep
 class SmartCart:
     def __init__(self):
         # 👉 모듈 초기화 (하드웨어 및 DB, TTS 등)
-        self.rfid = RFIDReader()
+        self.rfid = MultiRFIDReader()             # ✅ 변경: 3개 리더기 지원 객체
         self.button = EventButton()
         self.tts = TTS()
         self.db = LocalDB()
@@ -35,13 +35,14 @@ class SmartCart:
                     line = self.arduino.readline().decode('utf-8').strip()
                     print("📦 아두이노 →", line)
 
-                    # 1️⃣ 무게 변화 감지
+                    # 1️⃣ 무게 변화 감지 → RFID 태그 읽기
                     if line.startswith("WEIGHT:"):
-                        tag = self.rfid.read_tag()
-                        if tag:
-                            self.db.insert_product(tag)
-                            name = self.db.get_product_name(tag)
-                            self.tts.speak(f"{name}가 장바구니에 담겼습니다.")
+                        tags = self.rfid.read_all()  # ✅ 변경된 다중 리더기 처리
+                        if tags:
+                            for idx, tag in tags.items():
+                                self.db.insert_product(tag)
+                                name = self.db.get_product_name(tag)
+                                self.tts.speak(f"{name}가 장바구니에 담겼습니다.")
                         else:
                             print("⚠ RFID 태그 인식 실패")
 
