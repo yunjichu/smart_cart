@@ -2,35 +2,37 @@ import serial
 import time
 
 class PN532UART:
-    def __init__(self, port: str, baudrate: int = 9600, timeout: float = 0.5):
-        """
-        PN532 리더기를 UART(시리얼)로 초기화합니다.
-
-        Args:
-            port (str): UART 포트 경로 (예: '/dev/serial0')
-            baudrate (int): 통신 속도 (기본값 9600)
-            timeout (float): 수신 대기 시간 (초 단위)
-        """
+    def __init__(self, port: str, baudrate: int = 115200, timeout: float = 1.0):
         self.ser = serial.Serial(port, baudrate=baudrate, timeout=timeout)
-        time.sleep(1.0)  # 포트 연결 후 안정화 시간 확보
+        time.sleep(1.0)
+        self.ser.reset_input_buffer()
 
     def read_uid(self) -> str | None:
-        """
-        PN532 리더기로부터 카드 UID를 읽습니다.
-
-        Returns:
-            UID 문자열 (예: '04A1BC3D12') 또는 읽은 게 없으면 None
-        """
-        self.ser.write(b'\x55')  # 이 부분은 실제 PN532 명령으로 교체 필요
-        time.sleep(0.2)  # 응답 대기
+        #PN532 리더기로부터 카드 UID를 읽습니다.
+        #InListPassiveTarget 명령어를 사용하여 ISO14443A 태그를 검색합니다.
+        # PN532 UART 프레임 (InListPassiveTarget: D4 4A 01 00)
+        cmd = b'\x00\x00\xFF\x04\xFC\xD4\x4A\x01\x00\xE1\x00'
+        # 입력 버퍼 초기화 후 명령 전송
+        self.ser.reset_input_buffer()
+        self.ser.write(cmd)
+        time.sleep(0.3)
 
         if self.ser.in_waiting:
-            data = self.ser.read(self.ser.in_waiting)  # 버퍼에 있는 응답 읽기
-            uid = self._extract_uid(data)  # UID 추출 함수 호출
-            return uid
-        
+            response = self.ser.read(self.ser.in_waiting)
+            print(f"[DEBUG] 응답 raw: {response.hex().upper()}")  # 로그 확인용
 
-        return None  # 응답 없으면 None 반환
+        # 응답 안에 D5 4B 응답 패턴이 있는지 확인
+            if b'\xD5\x4B' in response:
+                try:
+                    idx = response.index(b'\xD5\x4B')
+                    uid_len = response[idx + 3]  # UID 길이
+                    uid_bytes = response[idx + 4 : idx + 4 + uid_len]
+                    return uid_bytes.hex().upper()
+                except Exception as e:
+                    print(f"[ERROR] UID 추출 중 오류: {e}")
+        return None
+
+
 
     def _extract_uid(self, data: bytes) -> str | None:
         """

@@ -8,9 +8,9 @@ class MultiRFIDReader:
         각 포트는 실제 연결된 라즈베리파이 UART 포트 이름에 맞게 지정해야 합니다.
         """
         self.readers = [
-            PN532UART('/dev/serial0'),     # 기본 UART (TXD0, RXD0)
-            PN532UART('/dev/ttyS1'),       # 소프트웨어 UART1 (예: GPIO17, GPIO27)
-            PN532UART('/dev/ttyS2'),       # 소프트웨어 UART2 (예: GPIO22, GPIO23)
+            PN532UART('/dev/ttyAMA0'),   # 기본 UART0
+            #PN532UART('/dev/ttyAMA1'),   # 추가 UART1
+            #PN532UART('/dev/ttyAMA2'),   # 추가 UART2
         ]
 
     def read_all(self):
