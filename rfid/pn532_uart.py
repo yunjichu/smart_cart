@@ -7,33 +7,35 @@ class PN532UART:
         time.sleep(1.0)
         self.ser.reset_input_buffer()
 
-    def read_uid(self) -> str | None:
-        #PN532 리더기로부터 카드 UID를 읽습니다.
-        #InListPassiveTarget 명령어를 사용하여 ISO14443A 태그를 검색합니다.
-        # PN532 UART 프레임 (InListPassiveTarget: D4 4A 01 00)
-        cmd = b'\x00\x00\xFF\x04\xFC\xD4\x4A\x01\x00\xE1\x00'
-        # 입력 버퍼 초기화 후 명령 전송
-        self.ser.reset_input_buffer()
-        self.ser.write(cmd)
-        time.sleep(0.3)
+    def read_uid(self):
+        try:
+            # PN532 UART 프레임: InListPassiveTarget 명령 (ISO14443A)
+            # 참고: 이프레임은 Host-to-PN532 (extended frame)
+            cmd = bytes([
+                0x00, 0x00, 0xFF, 0x04, 0xFC,
+                0xD4, 0x4A, 0x01, 0x00,
+                0xE1, 0x00
+            ])
 
-        if self.ser.in_waiting:
-            response = self.ser.read(self.ser.in_waiting)
-            print(f"[DEBUG] 응답 raw: {response.hex().upper()}")  # 로그 확인용
+            self.ser.write(cmd)
+            time.sleep(0.1)
 
-        # 응답 안에 D5 4B 응답 패턴이 있는지 확인
-            if b'\xD5\x4B' in response:
-                try:
-                    idx = response.index(b'\xD5\x4B')
-                    uid_len = response[idx + 3]  # UID 길이
-                    uid_bytes = response[idx + 4 : idx + 4 + uid_len]
-                    return uid_bytes.hex().upper()
-                except Exception as e:
-                    print(f"[ERROR] UID 추출 중 오류: {e}")
-        return None
+            response = self.ser.read(32)
+            print("[DEBUG] response:", response.hex())
 
 
+            # 응답 프레임 최소 길이 확인
+            if len(response) >= 24:
+                uid_len = response[23]
+                uid = response[24:24 + uid_len]
+                return uid.hex().upper()
 
+            return None
+
+        except Exception as e:
+            print("UID 읽기 오류:", e)
+            return None
+        
     def _extract_uid(self, data: bytes) -> str | None:
         """
         수신된 바이트 데이터에서 UID를 추출합니다.

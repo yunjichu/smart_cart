@@ -9,8 +9,8 @@ class MultiRFIDReader:
         """
         self.readers = [
             PN532UART('/dev/ttyAMA0'),   # 기본 UART0
-            #PN532UART('/dev/ttyAMA1'),   # 추가 UART1
-            #PN532UART('/dev/ttyAMA2'),   # 추가 UART2
+            PN532UART('/dev/ttyAMA1'),   # 추가 UART1
+            PN532UART('/dev/ttyAMA2'),   # 추가 UART2
         ]
 
     def read_all(self):
