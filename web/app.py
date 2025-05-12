@@ -3,7 +3,8 @@ import sqlite3
 import os
 
 app = Flask(__name__)
-DATABASE = r'C:\Users\715\Desktop\project22\project11\project\capstone.sqlite3'
+#DATABASE = r'C:\Users\715\Desktop\project22\project11\project\capstone.sqlite3'
+DATABASE = r'C:\Users\chu\GitHub\smart_cart\db\capstone.sqlite3'
 
 def get_db():
     conn = sqlite3.connect(DATABASE)

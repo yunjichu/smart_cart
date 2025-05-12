@@ -1,20 +1,16 @@
-from rfid.multi_reader import MultiRFIDReader
-import time
+import serial
 
-reader = MultiRFIDReader()
+# UNO가 연결된 포트로 설정 (ttyUSB0, ttyACM0 등 상황에 맞게 변경)
+ser = serial.Serial('/dev/ttyUSB0', 9600, timeout=1)
+
+print("아두이노에서 UID 수신 대기 중...")
 
 try:
     while True:
-        tags=reader.read_all()
-        if tags:
-            print("태그 인식됨:")
-            for idx, uid in tags.items():
-                print(f" 리더기 {idx}: {uid}")
-        else:
-            print("태그 없음")
-        
-        time.sleep(1)
-
+        line = ser.readline().decode('utf-8').strip()
+        if line.startswith("READER"):
+            reader, uid = line.split(":")
+            print(f"{reader} 에서 태그 감지됨 → UID: {uid}")
 except KeyboardInterrupt:
-    print("테스트 종료")
+    print("종료합니다.")
 
