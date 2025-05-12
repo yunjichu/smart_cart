@@ -3,7 +3,7 @@ import sqlite3
 import os
 
 app = Flask(__name__)
-DATABASE = r'/home/rpi5/Desktop/smart_cart/db/capstone.sqlite3'
+DATABASE = r'C:\Users\715\Desktop\project22\project11\project\capstone.sqlite3'
 
 def get_db():
     conn = sqlite3.connect(DATABASE)
@@ -81,7 +81,7 @@ def add_item():
         conn.close()
 
 # 물품 삭제 API
-@app.route('/api/items/<int:item_id>', methods=['DELETE'])
+@app.route('/api/items/<item_id>', methods=['DELETE'])
 def delete_item(item_id):
     conn = get_db()
     try:
@@ -186,30 +186,74 @@ def get_cart():
     finally:
         conn.close()
 
+# 특정 카트 번호로 장바구니 조회
+@app.route('/api/cart/<int:cart_num>', methods=['GET'])
+def get_cart_by_num(cart_num):
+    conn = get_db()
+    try:
+        cart_items = conn.execute('''
+            SELECT c.cart_num, c.item_num, i.item_name, i.item_price,
+                   COALESCE(e.event_price, i.item_price) AS final_price,
+                   c.quantity,
+                   COALESCE(e.event_price, i.item_price) * c.quantity AS total_price
+            FROM cart c
+            JOIN item i ON c.item_num = i.item_num
+            LEFT JOIN event e ON i.item_num = e.item_num
+            WHERE c.cart_num = ?
+        ''', (cart_num,)).fetchall()
+
+        if not cart_items:
+            return jsonify({"error": "Cart not found"}), 404
+
+        return jsonify([dict(item) for item in cart_items])
+    except sqlite3.Error as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
 # 할인 등록 API
 @app.route('/api/events', methods=['POST'])
 def add_event():
     data = request.json
     conn = get_db()
     try:
+        # 먼저 item_num이 실제 존재하는지 확인
+        item_exists = conn.execute('SELECT 1 FROM item WHERE item_num = ?', (data['item_num'],)).fetchone()
+        if not item_exists:
+            return jsonify({"success": False, "error": "존재하지 않는 물품번호입니다."}), 400
+
+        origin_price = data['origin_price']
+        event_price = data['event_price']
+        event_rate = round((origin_price - event_price) / origin_price * 100)
+        period = data['event_period']
+
         conn.execute('''
-            INSERT INTO event (item_num, event_price, event_period)
-            VALUES (?, ?, ?)
+            INSERT INTO event (item_num, origin_price, event_price, event_rate, event_period)
+            VALUES (?, ?, ?, ?, ?)
             ON CONFLICT(item_num) DO UPDATE SET
-            event_price = ?, event_period = ?
+                origin_price = ?,
+                event_price = ?,
+                event_rate = ?,
+                event_period = ?
         ''', (
             data['item_num'],
-            data['event_price'],
-            data['event_period'],
-            data['event_price'],
-            data['event_period']
+            origin_price,
+            event_price,
+            event_rate,
+            period,
+            origin_price,
+            event_price,
+            event_rate,
+            period
         ))
         conn.commit()
         return jsonify({"success": True})
     except sqlite3.Error as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"success": False, "error": str(e)}), 500
     finally:
         conn.close()
+
+
 
 # 할인 목록 조회
 @app.route('/api/events', methods=['GET'])
@@ -244,4 +288,4 @@ def delete_event(item_num):
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(debug=True)

@@ -65,10 +65,12 @@
 
         // DB에서 모든 물품 불러오기
         function loadItems() {
+            const tableBody = document.querySelector("#product-table tbody");
+            tableBody.innerHTML = ''; // 기존 내용 초기화 ← 이 부분이 중요
+
             fetch('/api/items')
                 .then(response => response.json())
                 .then(data => {
-                    const tableBody = document.querySelector("#product-table tbody");
                     data.forEach(item => {
                         const newRow = document.createElement("tr");
                         newRow.innerHTML = `
@@ -78,7 +80,7 @@
                             <td>₩${Number(item.item_price).toLocaleString()}</td>
                             <td>${item.item_exp}</td>
                             <td>${item.item_storage}</td>
-                            <td><button onclick="deleteItem(${item.item_num})">삭제</button></td>
+                            <td><button onclick="deleteItem('${item.item_num}')">삭제</button></td>
                         `;
                         tableBody.appendChild(newRow);
                     });

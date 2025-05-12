@@ -25,13 +25,14 @@
 <body>
     <h1>할인 행사 등록</h1>
     <form id="discount-form">
-        <label>물품 번호: <input type="text" id="product-id" required></label><br>
-        <label>원가격(₩): <input type="number" id="original-price" required></label><br>
-        <label>할인 가격(₩): <input type="number" id="discount-price" required></label><br>
-        <label>이벤트 종료일: <input type="date" id="end-date" required></label><br><br>
-        <p>할인율: <span id="discount-percent">0%</span></p>
-        <button type="submit">등록</button>
-    </form>
+    <label>물품 번호: <input type="text" id="product-id" required></label><br>
+    <label>원가격(₩): <input type="number" id="original-price" required></label><br>
+    <label>할인 가격(₩): <input type="number" id="discount-price" required></label><br>
+    <label>이벤트 시작일: <input type="date" id="start-date" required></label><br>
+    <label>이벤트 종료일: <input type="date" id="end-date" required></label><br><br>
+    <p>할인율: <span id="discount-percent">0%</span></p>
+    <button type="submit">등록</button>
+</form>
 
     <h2>등록된 할인 행사 목록</h2>
     <table id="discount-table">
@@ -111,10 +112,11 @@ form.addEventListener("submit", function(event) {
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-            item_num: productId,
-            event_price: discount,
-            event_period: period
-        })
+    item_num: productId,
+    origin_price: original,
+    event_price: discount,
+    event_period: period
+})
     })
     .then(response => response.json())
     .then(data => {
