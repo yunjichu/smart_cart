@@ -1,5 +1,6 @@
-import sqlite3
+import sqlite3 
 
+#ㅁㅁㅁ
 def handle_rfid_data(ser, tts):
     """
     UNO B에서 수신한 RFID UID 데이터를 처리하는 함수
