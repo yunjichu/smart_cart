@@ -239,7 +239,7 @@ def get_cart_by_num(cart_num):
     finally:
         conn.close()
 
-def add_to_cart(uid):
+def add_to_cart1(uid):
     """카트에 UID 추가하는 함수"""
     conn = get_db()
     try:

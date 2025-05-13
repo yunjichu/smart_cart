@@ -12,7 +12,7 @@ def get_serial_port():
     시스템에서 연결된 모든 시리얼 포트 리스트 출력
     자동으로 첫 번째 포트를 사용하도록 설정
     """
-    ports = [f"/dev/{dev}" for dev in os.listdir('/dev') if dev.startswith('ttyUSB') or dev.startswith('ttyACM')]
+    ports = [f"/dev/{dev}" for dev in os.listdir('/dev') if dev.startswith('ttyUSB0') or dev.startswith('ttyACM0')]
     if ports:
         return ports[0]  # 첫 번째 포트를 사용
     else:
