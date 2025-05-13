@@ -1,12 +1,22 @@
+import time
+import os
+import serial
+import subprocess
+import sys
 from output.tts import TTS
 from input.arduino_rfid_reader import handle_rfid_data
 from input.arduino_sensor_reader import handle_sensor_data
 
-import serial
-import time
-import subprocess
-import os
-import sys
+def get_serial_port():
+    """
+    시스템에서 연결된 모든 시리얼 포트 리스트 출력
+    자동으로 첫 번째 포트를 사용하도록 설정
+    """
+    ports = [f"/dev/{dev}" for dev in os.listdir('/dev') if dev.startswith('ttyUSB') or dev.startswith('ttyACM')]
+    if ports:
+        return ports[0]  # 첫 번째 포트를 사용
+    else:
+        raise Exception("시리얼 포트를 찾을 수 없습니다.")
 
 class SmartCart:
     def __init__(self):
@@ -28,30 +38,31 @@ class SmartCart:
 
         # ✅ UNO B: RFID 아두이노 연결
         try:
-            self.arduino_rfid = serial.Serial('/dev/ttyACM1', 9600, timeout=1)
-            print("✅ RFID 아두이노 연결 성공")
+            self.arduino_rfid = serial.Serial('/dev/ttyUSB0', 9600, timeout=1)
+            print(f"✅ RFID 아두이노 연결 성공: ")
         except Exception as e:
             print("❌ RFID 보드 연결 실패:", e)
             self.arduino_rfid = None
 
-        # ✅ UNO A: 센서 아두이노 연결 (사용하지 않음)
-        self.arduino_sensor = None
+        # ✅ UNO A: 센서 아두이노 연결
+        try:
+            self.arduino_sensor = serial.Serial('/dev/ttyACM0', 9600, timeout=1)
+            print("✅ 센서 아두이노 연결 성공")
+        except Exception as e:
+            print("❌ 센서 보드 연결 실패:", e)
+            self.arduino_sensor = None
 
     def run_logic(self):
+        #read_rfid_now = False  # 무게 감지 없이 RFID를 리딩할 준비 상태
         last_rfid_time = time.time()  # 마지막 RFID 리딩 시간 추적
 
         try:
             while True:
-                # RFID 리딩을 무조건 시도하도록 수정
-                if self.arduino_rfid and self.arduino_rfid.in_waiting:
-                    handle_rfid_data(self.arduino_rfid, self.tts)  # RFID 태그 리딩
-                    last_rfid_time = time.time()  # RFID 리딩 후 시간 갱신
+                # 센서 수신 → RFID 리딩을 바로 실행
+                if self.arduino_rfid and self.arduino_sensor.in_waiting:
+                    handle_rfid_data(self.arduino_rfid)
 
-                # 타임아웃 처리: 일정 시간 동안 리딩이 없으면 다시 시작
-                if time.time() - last_rfid_time > 5:  # 5초 후 다시 리딩
-                    print("❌ RFID 태그를 읽지 못했습니다. 다시 시도 중...")
-
-                time.sleep(0.1)  # 과도한 CPU 사용 방지
+                time.sleep(0.1)
         except KeyboardInterrupt:
             print("\n🛑 프로그램 종료 중...")
             if self.flask_process:
