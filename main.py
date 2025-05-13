@@ -1,5 +1,3 @@
-# main.py
-
 from output.tts import TTS
 from input.arduino_rfid_reader import handle_rfid_data
 from input.arduino_sensor_reader import handle_sensor_data
@@ -14,10 +12,10 @@ class SmartCart:
     def __init__(self):
         self.tts = TTS()
 
-        # ✅ Flask 웹 서버 실행 (web/app.py)
+        # ✅ Flask 웹 서버 실행
         try:
             flask_path = os.path.join("web", "app.py")
-            python_exec = sys.executable  # 현재 실행 중인 파이썬 경로 사용
+            python_exec = sys.executable
             self.flask_process = subprocess.Popen(
                 [python_exec, flask_path],
                 stdout=subprocess.PIPE,
@@ -45,15 +43,17 @@ class SmartCart:
             self.arduino_sensor = None
 
     def run_logic(self):
+        read_rfid_now = False  # 무게 변화 감지 시 True로 설정
         try:
             while True:
-                # RFID 수신
-                if self.arduino_rfid and self.arduino_rfid.in_waiting:
-                    handle_rfid_data(self.arduino_rfid, self.tts)
-
-                # 센서 수신
+                # 센서 수신 → 무게 변화 여부 판단
                 if self.arduino_sensor and self.arduino_sensor.in_waiting:
-                    handle_sensor_data(self.arduino_sensor, self.tts)
+                    read_rfid_now = handle_sensor_data(self.arduino_sensor, self.tts)
+
+                # 무게 변화가 감지된 경우만 RFID 리딩
+                if read_rfid_now and self.arduino_rfid and self.arduino_rfid.in_waiting:
+                    handle_rfid_data(self.arduino_rfid, self.tts)
+                    read_rfid_now = False  # 1회만 수행
 
                 time.sleep(0.1)
         except KeyboardInterrupt:
@@ -62,7 +62,6 @@ class SmartCart:
                 self.flask_process.terminate()
                 print("🧹 Flask 서버 프로세스 종료됨")
 
-# 프로그램 진입점
 if __name__ == "__main__":
     cart = SmartCart()
     cart.run_logic()
