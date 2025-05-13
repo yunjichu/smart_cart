@@ -8,7 +8,7 @@ sys.path.append('/home/rpi4/Desktop/smart_cart/web')
 
 from app import add_to_cart #y에서 정의한 get_db 함수 호출
 
-def handle_rfid_data(ser):
+def handle_rfid_data(ser, tts):
     """
     UNO B에서 수신한 RFID UID 데이터를 처리하는 함수
     예상 형식: "READER1 UID: XXXXXXXX"
@@ -32,9 +32,6 @@ def handle_rfid_data(ser):
                 add_to_cart(uid)  # app.py의 add_to_cart 함수 호출
 
                 # TTS로 알림
-                print(f"✔️ UID {uid}가 {reader}에서 감지됨!")
-        else:
-            print(f"❌ 잘못된 데이터 형식: '{line}'")
+                tts.speak(f"RFID 태그: {uid} 읽음")  # TTS로 UID 음성 출력
     except Exception as e:
-        print(f"❌ RFID 데이터 처리 오류: {e}")
-
+        print("❌ RFID 데이터 처리 오류:", e)

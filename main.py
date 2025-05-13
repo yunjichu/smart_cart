@@ -53,14 +53,16 @@ class SmartCart:
             self.arduino_sensor = None
 
     def run_logic(self):
-        #read_rfid_now = False  # 무게 감지 없이 RFID를 리딩할 준비 상태
         last_rfid_time = time.time()  # 마지막 RFID 리딩 시간 추적
-
         try:
             while True:
-                # 센서 수신 → RFID 리딩을 바로 실행
+                # RFID 리딩 및 센서 데이터 처리
                 if self.arduino_rfid and self.arduino_sensor.in_waiting:
-                    handle_rfid_data(self.arduino_rfid)
+                    # RFID 데이터 처리
+                    handle_rfid_data(self.arduino_rfid, self.tts)  # RFID 리딩과 TTS 안내
+
+                    # 센서 데이터 처리 (장애물 감지)
+                    handle_sensor_data(self.arduino_sensor, self.tts)  # 장애물 감지와 TTS 안내
 
                 time.sleep(0.1)
         except KeyboardInterrupt:
@@ -69,6 +71,7 @@ class SmartCart:
                 self.flask_process.terminate()
                 print("🧹 Flask 서버 프로세스 종료됨")
 
+            
 if __name__ == "__main__":
     cart = SmartCart()
     cart.run_logic()
