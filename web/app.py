@@ -1,9 +1,12 @@
 from flask import Flask, render_template, request, jsonify
 import sqlite3
 import os
+import threading
+import serial
+import time
 
 app = Flask(__name__)
-#DATABASE = r'C:\Users\715\Desktop\project22\project11\project\capstone.sqlite3'
+#DATABASE = r'C:\Users\1\Desktop\smart_cart\smart_cart\db\capstone.sqlite3'
 DATABASE = r'C:\Users\chu\GitHub\smart_cart\db\capstone.sqlite3'
 
 def get_db():
@@ -287,6 +290,42 @@ def delete_event(item_num):
     finally:
         conn.close()
 
+def rfid_listener():
+    try:
+        ser = serial.Serial('/dev/ttyUSB0', 9600, timeout=1)  # Windows는 'COM3' 등으로 바꿔야 함
+        print("RFID 리스너 시작됨")
+
+        while True:
+            rfid_tag = ser.readline().decode().strip()
+            if rfid_tag:
+                print(f"[RFID] 태그 읽음: {rfid_tag}")
+
+                # DB에 카트에 추가
+                conn = get_db()
+                try:
+                    conn.execute('''
+                        INSERT INTO cart (cart_num, item_num, quantity)
+                        VALUES (?, ?, 1)
+                        ON CONFLICT(cart_num, item_num) DO UPDATE SET
+                        quantity = quantity + 1
+                    ''', (1, rfid_tag))  # cart_num = 1로 고정 (필요시 변경)
+                    conn.commit()
+                    print(f"[DB] 태그 {rfid_tag} 카트에 추가 완료")
+                except sqlite3.Error as e:
+                    print(f"[DB 오류] {e}")
+                finally:
+                    conn.close()
+            time.sleep(0.1)  # 과도한 CPU 사용 방지
+
+    except serial.SerialException as e:
+        print(f"[시리얼 오류] {e}")
+
+
 
 if __name__ == '__main__':
+    # RFID 리스너 쓰레드 시작
+    rfid_thread = threading.Thread(target=rfid_listener, daemon=True)
+    rfid_thread.start()
+
+    # Flask 서버 실행
     app.run(debug=True)
