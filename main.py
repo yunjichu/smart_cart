@@ -39,7 +39,7 @@ class SmartCart:
         # ✅ UNO B: RFID 아두이노 연결
         try:
             self.arduino_rfid = serial.Serial('/dev/ttyUSB0', 9600, timeout=1)
-            print(f"✅ RFID 아두이노 연결 성공: ")
+            print(f"✅ RFID 아두이노 연결 성공")
         except Exception as e:
             print("❌ RFID 보드 연결 실패:", e)
             self.arduino_rfid = None
@@ -60,7 +60,6 @@ class SmartCart:
                 if self.arduino_rfid and self.arduino_sensor.in_waiting:
                     # RFID 데이터 처리
                     handle_rfid_data(self.arduino_rfid, self.tts)  # RFID 리딩과 TTS 안내
-
                     # 센서 데이터 처리 (장애물 감지)
                     handle_sensor_data(self.arduino_sensor, self.tts)  # 장애물 감지와 TTS 안내
 

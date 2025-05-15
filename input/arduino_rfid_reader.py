@@ -5,9 +5,9 @@ import sqlite3
 
 # 현재 스크립트가 있는 디렉토리로부터 상대 경로로 web 디렉토리 찾기
 
-sys.path.append(os.path.join(os.getcwd(), 'web'))
+#sys.path.append(os.path.join(os.getcwd(), 'web'))
 
-from app import add_to_cart1 #y에서 정의한 get_db 함수 호출
+#from app import add_to_cart1 #y에서 정의한 get_db 함수 호출
 
 def handle_rfid_data(ser, tts):
     """
