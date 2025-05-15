@@ -254,6 +254,111 @@ def add_to_cart(uid):
         print(f"[DB 오류] {e}")
     finally:
         conn.close()
+        
+# 할인 등록 API
+@app.route('/api/events', methods=['POST'])
+def add_event():
+    data = request.json
+    conn = get_db()
+    try:
+        # 먼저 item_num이 실제 존재하는지 확인
+        item_exists = conn.execute('SELECT 1 FROM item WHERE item_num = ?', (data['item_num'],)).fetchone()
+        if not item_exists:
+            return jsonify({"success": False, "error": "존재하지 않는 물품번호입니다."}), 400
+
+        origin_price = data['origin_price']
+        event_price = data['event_price']
+        event_rate = round((origin_price - event_price) / origin_price * 100)
+        period = data['event_period']
+
+        conn.execute('''
+            INSERT INTO event (item_num, origin_price, event_price, event_rate, event_period)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(item_num) DO UPDATE SET
+                origin_price = ?,
+                event_price = ?,
+                event_rate = ?,
+                event_period = ?
+        ''', (
+            data['item_num'],
+            origin_price,
+            event_price,
+            event_rate,
+            period,
+            origin_price,
+            event_price,
+            event_rate,
+            period
+        ))
+        conn.commit()
+        return jsonify({"success": True})
+    except sqlite3.Error as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+    finally:
+        conn.close()
+
+
+
+# 할인 목록 조회
+@app.route('/api/events', methods=['GET'])
+def get_events():
+    conn = get_db()
+    try:
+        events = conn.execute('''
+            SELECT e.*, i.item_name, i.item_price
+            FROM event e
+            JOIN item i ON e.item_num = i.item_num
+        ''').fetchall()
+        return jsonify([dict(event) for event in events])
+    except sqlite3.Error as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+# 할인 삭제 API
+@app.route('/api/events/<item_num>', methods=['DELETE'])
+def delete_event(item_num):
+    conn = get_db()
+    try:
+        cursor = conn.execute('DELETE FROM event WHERE item_num = ?', (item_num,))
+        conn.commit()
+        if cursor.rowcount == 0:
+            return jsonify({"error": "Event not found"}), 404
+        return jsonify({"success": True})
+    except sqlite3.Error as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+def rfid_listener():
+    try:
+        ser = serial.Serial('/dev/ttyUSB0', 9600, timeout=1)  # Windows는 'COM3' 등으로 바꿔야 함
+        print("RFID 리스너 시작됨")
+
+        while True:
+            rfid_tag = ser.readline().decode().strip()
+            if rfid_tag:
+                print(f"[RFID] 태그 읽음: {rfid_tag}")
+
+                # DB에 카트에 추가
+                conn = get_db()
+                try:
+                    conn.execute('''
+                        INSERT INTO cart (cart_num, item_num, quantity)
+                        VALUES (?, ?, 1)
+                        ON CONFLICT(cart_num, item_num) DO UPDATE SET
+                        quantity = quantity + 1
+                    ''', (1, rfid_tag))  # cart_num = 1로 고정 (필요시 변경)
+                    conn.commit()
+                    print(f"[DB] 태그 {rfid_tag} 카트에 추가 완료")
+                except sqlite3.Error as e:
+                    print(f"[DB 오류] {e}")
+                finally:
+                    conn.close()
+            time.sleep(0.1)  # 과도한 CPU 사용 방지
+
+    except serial.SerialException as e:
+        print(f"[시리얼 오류] {e}")
 
 if __name__ == '__main__':
 
