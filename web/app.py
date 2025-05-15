@@ -239,21 +239,7 @@ def get_cart_by_num(cart_num):
     finally:
         conn.close()
 
-def add_to_cart1(uid):
-    """카트에 UID 추가하는 함수"""
-    conn = get_db()
-    try:
-        conn.execute(''' 
-            INSERT INTO cart (cart_num, item_num, quantity) 
-            VALUES (?, ?, 1)
-            ON CONFLICT(cart_num, item_num) DO UPDATE SET quantity = quantity + 1
-        ''', (1, uid))  # cart_num = 1로 고정, uid는 RFID UID
-        conn.commit()
-        print(f"[DB] UID {uid} 카트에 추가 완료")
-    except sqlite3.Error as e:
-        print(f"[DB 오류] {e}")
-    finally:
-        conn.close()
+
         
 # 할인 등록 API
 @app.route('/api/events', methods=['POST'])
@@ -330,35 +316,23 @@ def delete_event(item_num):
     finally:
         conn.close()
 
-def rfid_listener():
+def add_to_cart1(uid):
+    print(f"🛒 UID {uid}를 DB에 추가 중...")
+    """카트에 UID 추가하는 함수"""
+    conn = get_db()
     try:
-        ser = serial.Serial('/dev/ttyUSB0', 9600, timeout=1)  # Windows는 'COM3' 등으로 바꿔야 함
-        print("RFID 리스너 시작됨")
+        conn.execute(''' 
+            INSERT INTO cart (cart_num, item_num, quantity) 
+            VALUES (?, ?, 1)
+            ON CONFLICT(cart_num, item_num) DO UPDATE SET quantity = quantity + 1
+        ''', (1, uid))  # cart_num = 1로 고정, uid는 RFID UID
+        conn.commit()
+        print(f"[DB] UID {uid} 카트에 추가 완료")
+    except sqlite3.Error as e:
+        print(f"[DB 오류] {e}")
+    finally:
+        conn.close()
 
-        while True:
-            rfid_tag = ser.readline().decode().strip()
-            if rfid_tag:
-                print(f"[RFID] 태그 읽음: {rfid_tag}")
-
-                # DB에 카트에 추가
-                conn = get_db()
-                try:
-                    conn.execute('''
-                        INSERT INTO cart (cart_num, item_num, quantity)
-                        VALUES (?, ?, 1)
-                        ON CONFLICT(cart_num, item_num) DO UPDATE SET
-                        quantity = quantity + 1
-                    ''', (1, rfid_tag))  # cart_num = 1로 고정 (필요시 변경)
-                    conn.commit()
-                    print(f"[DB] 태그 {rfid_tag} 카트에 추가 완료")
-                except sqlite3.Error as e:
-                    print(f"[DB 오류] {e}")
-                finally:
-                    conn.close()
-            time.sleep(0.1)  # 과도한 CPU 사용 방지
-
-    except serial.SerialException as e:
-        print(f"[시리얼 오류] {e}")
 
 if __name__ == '__main__':
 

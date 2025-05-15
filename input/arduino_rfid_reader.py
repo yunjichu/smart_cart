@@ -5,9 +5,9 @@ import sqlite3
 
 # 현재 스크립트가 있는 디렉토리로부터 상대 경로로 web 디렉토리 찾기
 
-#sys.path.append(os.path.join(os.getcwd(), 'web'))
+sys.path.append(os.path.join(os.getcwd(), 'web'))
 
-#from app import add_to_cart1 #y에서 정의한 get_db 함수 호출
+from app import add_to_cart1 #y에서 정의한 get_db 함수 호출
 
 def handle_rfid_data(ser, tts):
     """
@@ -30,7 +30,7 @@ def handle_rfid_data(ser, tts):
                 print(f"📦 {reader} → UID 감지: {uid}")
 
                 # DB에 UID 추가 (app.py에서 정의한 add_to_cart 함수 호출)
-                #add_to_cart1(uid)  # app.py의 add_to_cart 함수 호출
+                add_to_cart1(uid)  # app.py의 add_to_cart 함수 호출
 
                 # TTS로 알림
                 tts.speak(f"RFID 태그: {uid} 읽음")  # TTS로 UID 음성 출력

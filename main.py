@@ -1,22 +1,13 @@
-import time
-import os
 import serial
+import threading
+import time
 import subprocess
+import os
 import sys
+
 from output.tts import TTS
 from input.arduino_rfid_reader import handle_rfid_data
 from input.arduino_sensor_reader import handle_sensor_data
-
-def get_serial_port():
-    """
-    시스템에서 연결된 모든 시리얼 포트 리스트 출력
-    자동으로 첫 번째 포트를 사용하도록 설정
-    """
-    ports = [f"/dev/{dev}" for dev in os.listdir('/dev') if dev.startswith('ttyUSB0') or dev.startswith('ttyACM0')]
-    if ports:
-        return ports[0]  # 첫 번째 포트를 사용
-    else:
-        raise Exception("시리얼 포트를 찾을 수 없습니다.")
 
 class SmartCart:
     def __init__(self):
@@ -36,15 +27,7 @@ class SmartCart:
             print("❌ Flask 실행 실패:", e)
             self.flask_process = None
 
-        # ✅ UNO B: RFID 아두이노 연결
-        try:
-            self.arduino_rfid = serial.Serial('/dev/ttyUSB0', 9600, timeout=1)
-            print(f"✅ RFID 아두이노 연결 성공")
-        except Exception as e:
-            print("❌ RFID 보드 연결 실패:", e)
-            self.arduino_rfid = None
-
-        # ✅ UNO A: 센서 아두이노 연결
+        # ✅ UNO A: 센서용 아두이노 연결
         try:
             self.arduino_sensor = serial.Serial('/dev/ttyACM0', 9600, timeout=1)
             print("✅ 센서 아두이노 연결 성공")
@@ -52,25 +35,30 @@ class SmartCart:
             print("❌ 센서 보드 연결 실패:", e)
             self.arduino_sensor = None
 
-    def run_logic(self):
-        last_rfid_time = time.time()  # 마지막 RFID 리딩 시간 추적
+        # ✅ UNO B: RFID 아두이노 연결
         try:
-            while True:
-                # RFID 리딩 및 센서 데이터 처리
-                if self.arduino_rfid and self.arduino_sensor.in_waiting:
-                    # RFID 데이터 처리
-                    handle_rfid_data(self.arduino_rfid, self.tts)  # RFID 리딩과 TTS 안내
-                    # 센서 데이터 처리 (장애물 감지)
-                    handle_sensor_data(self.arduino_sensor, self.tts)  # 장애물 감지와 TTS 안내
+            self.arduino_rfid = serial.Serial('/dev/ttyUSB0', 9600, timeout=1)
+            print("✅ RFID 아두이노 연결 성공")
+        except Exception as e:
+            print("❌ RFID 보드 연결 실패:", e)
+            self.arduino_rfid = None
 
-                time.sleep(0.1)
-        except KeyboardInterrupt:
-            print("\n🛑 프로그램 종료 중...")
-            if self.flask_process:
-                self.flask_process.terminate()
-                print("🧹 Flask 서버 프로세스 종료됨")
+    def run_logic(self):
+        threads = []
 
-            
+        if self.arduino_sensor:
+            t_sensor = threading.Thread(target=handle_sensor_data, args=(self.arduino_sensor, self.tts))
+            t_sensor.start()
+            threads.append(t_sensor)
+
+        if self.arduino_rfid:
+            t_rfid = threading.Thread(target=handle_rfid_data, args=(self.arduino_rfid, self.tts))
+            t_rfid.start()
+            threads.append(t_rfid)
+
+        for t in threads:
+            t.join()
+
 if __name__ == "__main__":
     cart = SmartCart()
     cart.run_logic()
