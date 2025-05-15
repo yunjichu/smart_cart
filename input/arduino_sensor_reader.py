@@ -21,5 +21,10 @@ def handle_sensor_data(ser, tts):
             else:
                 print("❌ 예상된 센서 형식이 아닙니다:", line)
     except Exception as e:
+<<<<<<< HEAD
         print("센서 데이터 처리 오류: ",e)
+=======
+        print(" 센서 데이터 처리 오류:", e)
+        
+>>>>>>> e10f95f (sensor 수정정)
 
