@@ -1,9 +1,7 @@
 # input/arduino_sensor_reader.py
 import time
-# last_weight = None  # 전역 변수로 마지막 무게 저장
-# THRESHOLD = 100.0   # 무게 변화 기준 (100g)
 
-def handle_sensor_data(ser, tts):
+def handle_sensor_data(ser, tts, arduino_weight):
     try:
         while True:
             if ser.in_waiting == 0:
@@ -15,9 +13,17 @@ def handle_sensor_data(ser, tts):
 
             if line.startswith("OBSTACLE:"):
                 direction = line.split(":")[1]
-                print(f"🚧 장애물 감지: {direction} 방향")
-                tts.speak(f"장애물 감지: {direction} 방향")
+                direction_kor = {
+                    "left": "왼쪽",
+                    "right": "오른쪽",
+                    "front": "앞쪽"
+                }.get(direction, direction)
+                
+                print(f"{direction_kor} 방향에서 장애물이 감지되었습니다.")
+                tts.speak(f"{direction_kor} 방향에서 장애물이 감지되었습니다.")
                 time.sleep(2)  # 음성 안내 간격
+            elif line.startswith("Hands off"):
+                arduino_weight.write(b"Hands off\n")
             else:
                 print("❌ 예상된 센서 형식이 아닙니다:", line)
     except Exception as e:

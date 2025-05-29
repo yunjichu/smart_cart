@@ -1,12 +1,14 @@
 from flask import Flask, render_template, request, jsonify
+from db import get_db, enable_foreign_keys, add_to_cart_by_uid, get_item_info_by_rfid
 import sqlite3
 import os
 import threading
 import serial
 import time
 
-app = Flask(__name__)
-DATABASE = r'/home/rpi4/Desktop/smart_cart/db/capstone.sqlite3'
+# 데이터베이스 파일 경로 설정
+# 필요에 따라 경로를 환경 변수나 설정 파일로 분리할 수 있습니다.
+DATABASE = r'C:\Users\911\Downloads\smart_cart-main\smart_cart-main\db\capstone.sqlite3'
 
 def get_db():
     """
@@ -16,15 +18,108 @@ def get_db():
     conn.row_factory = sqlite3.Row
     return conn
 
-@app.before_request
 def enable_foreign_keys():
     """
-    요청 전에 SQLite에서 외래 키를 활성화
+    SQLite 외래 키 활성화
     """
     conn = get_db()
     conn.execute('PRAGMA foreign_keys = ON')
     conn.commit()
     conn.close()
+
+def add_to_cart_by_uid(uid, cart_num=1):
+    """
+    RFID UID를 사용하여 카트에 물품 추가
+    """
+    print(f"🛒 UID {uid}를 DB에 추가 중...")
+    conn = get_db()
+    try:
+        conn.execute(''' 
+            INSERT INTO cart (cart_num, item_num, quantity) 
+            VALUES (?, ?, 1)
+            ON CONFLICT(cart_num, item_num) DO UPDATE SET quantity = quantity + 1
+        ''', (cart_num, uid))
+        conn.commit()
+        print(f"[DB] UID {uid} 카트에 추가 완료")
+    except sqlite3.Error as e:
+        print(f"[DB 오류] {e}")
+    finally:
+        conn.close()
+
+def get_item_info_by_rfid(rfid_number):
+    """
+    RFID 번호로 물품 정보를 조회
+    """
+    conn = get_db()
+    item = conn.execute('''
+        SELECT item_name, item_exp, item_storage
+        FROM item
+        WHERE item_num = ?
+    ''', (rfid_number,)).fetchone()
+    conn.close()
+    return item
+✅ app.py에서 수정할 부분
+맨 위에 import 추가:
+
+python
+코드 복사
+from db import get_db, enable_foreign_keys, add_to_cart_by_uid, get_item_info_by_rfid
+기존의 get_db(), enable_foreign_keys(), add_to_cart1(), get_item_info() 등 DB 관련 함수들을 삭제합니다.
+
+/api/items/<rfid_number> 경로 함수는 이렇게 수정하세요:
+
+python
+코드 복사
+@app.route('/api/items/<rfid_number>', methods=['GET'])
+def get_item_info(rfid_number):
+    item = get_item_info_by_rfid(rfid_number)
+    if item:
+        return jsonify({
+            "item_name": item["item_name"],
+            "item_exp": item["item_exp"],
+            "item_storage": item["item_storage"]
+        })
+    else:
+        return jsonify({"error": "해당 물품을 찾을 수 없습니다."}), 404
+@app.before_request 부분은 enable_foreign_keys()를 호출하도록 유지합니다:
+
+python
+코드 복사
+@app.before_request
+def before_request():
+    enable_foreign_keys()
+🔄 결과
+app.py는 Flask 라우팅 및 뷰 처리에 집중
+
+db.py는 모든 데이터베이스 작업을 관리
+
+유지보수 및 테스트 용이성 증가
+
+필요하다면 models.py, config.py 등을 따로 분리해 더 구조화할 수도 있습니다. 원하시면 그것도 도와드릴게요!
+
+
+
+나의 말:
+그러면 app.py 코드 전체로 다시 보내줄 수 있어?
+
+ChatGPT의 말:
+물론입니다! 아래는 DB 관련 코드를 분리한 새로운 app.py 전체 코드입니다. 분리된 DB 함수는 db.py에서 관리되며, app.py는 라우팅과 로직 중심으로 깔끔하게 정리되어 있습니다.
+
+✅ app.py (Flask 애플리케이션)
+python
+코드 복사
+from flask import Flask, render_template, request, jsonify
+from db import get_db, enable_foreign_keys, add_to_cart_by_uid, get_item_info_by_rfid
+import sqlite3
+
+app = Flask(__name__)
+
+@app.before_request
+def before_request():
+    """
+    요청 전에 SQLite 외래 키 활성화
+    """
+    enable_foreign_keys()
 
 @app.route('/')
 def index():
@@ -37,30 +132,18 @@ def index():
 
 @app.route('/items', methods=['GET'])
 def items_page():
-    """
-    물품 등록 페이지
-    """
     return render_template('items.html')
 
 @app.route('/events', methods=['GET'])
 def events_page():
-    """
-    할인 행사 페이지
-    """
     return render_template('events.html')
 
 @app.route('/transactions', methods=['GET'])
 def transactions_page():
-    """
-    거래 내역 페이지
-    """
     return render_template('transactions.html')
 
 @app.route('/api/items', methods=['POST'])
 def register_item():
-    """
-    물품 등록 API
-    """
     data = request.json
     conn = get_db()
     try:
@@ -84,9 +167,6 @@ def register_item():
 
 @app.route('/api/items', methods=['PUT'])
 def add_item():
-    """
-    물품 추가 API
-    """
     data = request.get_json()
     conn = get_db()
     try:
@@ -104,31 +184,22 @@ def add_item():
 
 @app.route('/api/items/<item_id>', methods=['DELETE'])
 def delete_item(item_id):
-    """
-    물품 삭제 API
-    """
     conn = get_db()
     try:
-        # 트랜잭션 시작
         conn.execute('BEGIN')
         cursor = conn.execute('DELETE FROM item WHERE item_num = ?', (item_id,))
         conn.commit()
-
         if cursor.rowcount == 0:
             return jsonify({"error": "Item not found"}), 404
-
         return jsonify({"success": True})
     except sqlite3.Error as e:
-        conn.rollback()  # 오류 발생 시 롤백
+        conn.rollback()
         return jsonify({"error": str(e)}), 500
     finally:
         conn.close()
 
 @app.route('/api/items', methods=['GET'])
 def get_all_items():
-    """
-    모든 상품 조회 API
-    """
     conn = get_db()
     try:
         items = conn.execute('SELECT * FROM item').fetchall()
@@ -140,9 +211,6 @@ def get_all_items():
 
 @app.route('/api/item/<item_num>', methods=['GET'])
 def get_item(item_num):
-    """
-    제품 정보 조회 API (RFID 태그 기반)
-    """
     conn = get_db()
     try:
         item = conn.execute('''
@@ -161,9 +229,6 @@ def get_item(item_num):
 
 @app.route('/api/cart', methods=['POST'])
 def add_to_cart():
-    """
-    장바구니 추가 API
-    """
     data = request.json
     conn = get_db()
     try:
@@ -183,15 +248,12 @@ def add_to_cart():
 
 @app.route('/api/cart', methods=['GET'])
 def get_cart():
-    """
-    장바구니 조회 API
-    """
     conn = get_db()
     try:
         cart_items = conn.execute('''
             SELECT c.item_num, i.item_name, i.item_price,
-            COALESCE(e.event_price, i.item_price) as final_price,
-            c.quantity
+                   COALESCE(e.event_price, i.item_price) AS final_price,
+                   c.quantity
             FROM cart c
             JOIN item i ON c.item_num = i.item_num
             LEFT JOIN event e ON i.item_num = e.item_num
@@ -214,9 +276,6 @@ def get_cart():
 
 @app.route('/api/cart/<int:cart_num>', methods=['GET'])
 def get_cart_by_num(cart_num):
-    """
-    특정 카트 번호로 장바구니 조회
-    """
     conn = get_db()
     try:
         cart_items = conn.execute('''
@@ -239,15 +298,11 @@ def get_cart_by_num(cart_num):
     finally:
         conn.close()
 
-
-        
-# 할인 등록 API
 @app.route('/api/events', methods=['POST'])
 def add_event():
     data = request.json
     conn = get_db()
     try:
-        # 먼저 item_num이 실제 존재하는지 확인
         item_exists = conn.execute('SELECT 1 FROM item WHERE item_num = ?', (data['item_num'],)).fetchone()
         if not item_exists:
             return jsonify({"success": False, "error": "존재하지 않는 물품번호입니다."}), 400
@@ -283,9 +338,6 @@ def add_event():
     finally:
         conn.close()
 
-
-
-# 할인 목록 조회
 @app.route('/api/events', methods=['GET'])
 def get_events():
     conn = get_db()
@@ -301,7 +353,6 @@ def get_events():
     finally:
         conn.close()
 
-# 할인 삭제 API
 @app.route('/api/events/<item_num>', methods=['DELETE'])
 def delete_event(item_num):
     conn = get_db()
@@ -316,26 +367,18 @@ def delete_event(item_num):
     finally:
         conn.close()
 
-def add_to_cart1(uid):
-    print(f"🛒 UID {uid}를 DB에 추가 중...")
-    """카트에 UID 추가하는 함수"""
-    conn = get_db()
-    try:
-        conn.execute(''' 
-            INSERT INTO cart (cart_num, item_num, quantity) 
-            VALUES (?, ?, 1)
-            ON CONFLICT(cart_num, item_num) DO UPDATE SET quantity = quantity + 1
-        ''', (1, uid))  # cart_num = 1로 고정, uid는 RFID UID
-        conn.commit()
-        print(f"[DB] UID {uid} 카트에 추가 완료")
-    except sqlite3.Error as e:
-        print(f"[DB 오류] {e}")
-    finally:
-        conn.close()
-
+@app.route('/api/items/<rfid_number>', methods=['GET'])
+def get_item_info(rfid_number):
+    item = get_item_info_by_rfid(rfid_number)
+    if item:
+        return jsonify({
+            "item_name": item["item_name"],
+            "item_exp": item["item_exp"],
+            "item_storage": item["item_storage"]
+        })
+    else:
+        return jsonify({"error": "해당 물품을 찾을 수 없습니다."}), 404
 
 if __name__ == '__main__':
-
-    # Flask 서버 실행
     app.run(debug=True)
 

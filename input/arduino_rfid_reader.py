@@ -1,30 +1,65 @@
 import sys
 import os
 import time
-import sqlite3
-
-# 현재 스크립트가 있는 디렉토리로부터 상대 경로로 web 디렉토리 찾기
+import requests
 
 sys.path.append(os.path.join(os.getcwd(), 'web'))
 
-from app import add_to_cart1 #y에서 정의한 get_db 함수 호출
+from db import add_to_cart_by_uid, get_item_info_by_rfid  # DB 함수 사용
 
-def handle_rfid_data(ser, tts):
-    try:
-        while True:
-            if ser.in_waiting == 0:
-                time.sleep(0.1)
-                continue
+# 🧾 현재 장바구니 UID 상태 (라즈베리파이 메모리)
+current_uids = set()
 
-            line = ser.readline().decode('utf-8').strip()
-            print(f"📡 RFID 수신 데이터: {line}")
+# 📥 RFID 명령에 따라 UID 처리
+# - READ_ADD: 하나 읽어서 추가
+# - READ_REMOVE: 여러 개 읽고 없는 것 제거
 
-            if "UID:" in line:
-                uid = line.split("UID:")[1].strip()
-                print(f"📦 UID 감지: {uid}")
-                add_to_cart1(uid)
-                tts.speak(f"RFID 태그 {uid} 읽음")
+def handle_rfid_data(arduino_rfid, tts):
+    while True:
+        rfid_data = arduino_rfid.readline().decode('utf-8').strip()
+
+        if not rfid_data:
+            continue
+
+        print(f"[RFID 수신] {rfid_data}")
+
+        # 무게 증가 시: 하나 읽어서 추가
+        if rfid_data.startswith("READ_ADD:"):
+            uid = rfid_data.replace("READ_ADD:", "").strip()
+            if uid not in current_uids:
+                current_uids.add(uid)
+                add_to_cart_by_uid(uid)
+
+                item = get_item_info_by_rfid(uid)
+                if item:
+                    item_name = item["item_name"]
+                    item_expiry = item["item_exp"]
+                    item_storage = item["item_storage"]
+                    tts.speak(f"{item_name}, 유통기한 {item_expiry}, 보관: {item_storage}")
+                else:
+                    tts.speak("등록되지 않은 물품입니다.")
             else:
-                print("❌ 예상된 RFID 형식이 아닙니다:", line)
-    except Exception as e:
-        print("❌ RFID 데이터 처리 오류:", e)
+                print(f"[무시됨] {uid} 이미 장바구니에 있음")
+
+        # 무게 감소 시: 여러 개 읽고 없는 것 제거
+        elif rfid_data.startswith("READ_REMOVE_START"):
+            print("[RFID] 다중 읽기 시작")
+            read_uids = set()
+            start = time.time()
+
+            while time.time() - start < 5:
+                if arduino_rfid.in_waiting:
+                    line = arduino_rfid.readline().decode('utf-8').strip()
+                    if line.startswith("UID:"):
+                        uid = line.replace("UID:", "").strip()
+                        if uid:
+                            read_uids.add(uid)
+
+            to_remove = current_uids - read_uids
+            for uid in to_remove:
+                current_uids.remove(uid)
+                tts.speak(f"{uid} 장바구니에서 제거되었습니다.")
+                # 여기서 DB 제거 함수 호출 필요: remove_from_cart_by_uid(uid)
+
+        else:
+            print(f"[경고] 알 수 없는 RFID 명령 또는 형식: {rfid_data}")
