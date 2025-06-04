@@ -47,7 +47,7 @@ class SmartCart:
 
         # ✅ UNO C: 무게 아두이노 연결
         try:
-            self.arduino_weight = serial.Serial('', 9600, timeout=1)
+            self.arduino_weight = serial.Serial('/dev/ttyACM1', 9600, timeout=1)
             print("✅ 무게 아두이노 연결 성공")
         except Exception as e:
             print("❌ 무게 보드 연결 실패:", e)

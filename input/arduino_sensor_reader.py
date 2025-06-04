@@ -24,6 +24,7 @@ def handle_sensor_data(ser, tts, arduino_weight):
                 time.sleep(2)  # 음성 안내 간격
             elif line.startswith("Hands off"):
                 arduino_weight.write(b"Hands off\n")
+                arduino_weight.flush()
             else:
                 print("❌ 예상된 센서 형식이 아닙니다:", line)
     except Exception as e:

@@ -1,5 +1,6 @@
 #database.py
 import sqlite3
+import datetime
 
 def get_db():
     """
@@ -114,3 +115,13 @@ def remove_from_cart_by_uid(uid):
         return False
     finally:
         conn.close()
+        
+def get_todays_events():
+    conn = get_db()
+    today = datetime.date.today().isoformat()
+    cursor = conn.execute(
+        "SELECT event_name, discount_info FROM events WHERE event_date = ?", (today,)
+    )
+    results = cursor.fetchall()
+    conn.close()
+    return results

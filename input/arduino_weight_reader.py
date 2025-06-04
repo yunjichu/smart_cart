@@ -21,10 +21,12 @@ def handle_weight_data(ser_weight, ser_rfid):
                 if delta > THRESHOLD:
                     print("📦 무게 증가 → RFID에 READ_ADD 요청")
                     ser_rfid.write(b"RFID1_READ_ADD\n")
+                    ser_rfid.flush()
 
                 elif delta < -THRESHOLD:
                     print("📤 무게 감소 → RFID에 READ_REMOVE 요청")
                     ser_rfid.write(b"RFID1_READ_REMOVE\n")
+                    ser_rfid.flush()
 
             last_weight1 = current_weight
             
@@ -41,9 +43,11 @@ def handle_weight_data(ser_weight, ser_rfid):
                 if delta > THRESHOLD:
                     print("📦 무게 증가 → RFID에 READ_ADD 요청")
                     ser_rfid.write(b"RFID1_READ_ADD\n")
+                    ser_rfid.flush()
 
                 elif delta < -THRESHOLD:
                     print("📤 무게 감소 → RFID에 READ_REMOVE 요청")
                     ser_rfid.write(b"RFID1_READ_REMOVE\n")
+                    ser_rfid.flush()
 
             last_weight2 = current_weight
