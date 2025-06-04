@@ -3,9 +3,9 @@ import os
 import time
 import requests
 
-sys.path.append(os.path.join(os.getcwd(), 'web'))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'db')))
 
-from db import add_to_cart_by_uid, get_item_info_by_rfid  # DB 함수 사용
+from database import add_to_cart_by_uid, get_item_info_by_rfid  # DB 함수 사용
 
 # 🧾 현재 장바구니 UID 상태 (라즈베리파이 메모리)
 current_uids = set()
