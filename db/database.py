@@ -19,7 +19,7 @@ def enable_foreign_keys():
     conn.commit()
     conn.close()
 
-def add_to_cart1(uid):
+def add_to_cart_by_uid(uid):
     print(f"🛒 UID {uid}를 DB에 추가 중...")
     """카트에 UID 추가하는 함수"""
     conn = get_db()
