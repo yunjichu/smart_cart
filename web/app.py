@@ -298,7 +298,6 @@ def delete_event(item_num):
             return jsonify({"error": "해당 물품을 찾을 수 없습니다."}), 404
 
 if __name__ == '__main__':
-
     # Flask 서버 실행
     app.run(debug=True)
 

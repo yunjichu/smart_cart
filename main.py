@@ -9,6 +9,7 @@ from output.tts import TTS
 from input.arduino_rfid_reader import handle_rfid_data
 from input.arduino_sensor_reader import handle_sensor_data
 from input.arduino_weight_reader import handle_weight_data
+from input.button import button_listener
 
 class SmartCart:
     def __init__(self):
@@ -43,36 +44,50 @@ class SmartCart:
         except Exception as e:
             print("❌ RFID 보드 연결 실패:", e)
             self.arduino_rfid = None
-        
-        # ✅ UNO C: 무게게 아두이노 연결   
+
+        # ✅ UNO C: 무게 아두이노 연결
         try:
             self.arduino_weight = serial.Serial('', 9600, timeout=1)
             print("✅ 무게 아두이노 연결 성공")
         except Exception as e:
-            print("❌ 무게게 보드 연결 실패:", e)
-            self.arduino_weight = None  
+            print("❌ 무게 보드 연결 실패:", e)
+            self.arduino_weight = None
+
+    def safe_thread(self, target, name, *args):
+        def wrapper():
+            try:
+                print(f"🔁 {name} 스레드 시작")
+                target(*args)
+            except Exception as e:
+                print(f"❌ {name} 스레드 오류:", e)
+        return threading.Thread(target=wrapper, name=name)
 
     def run_logic(self):
         threads = []
 
         if self.arduino_sensor:
-            t_sensor = threading.Thread(target=handle_sensor_data, args=(self.arduino_sensor, self.tts, self.arduino_weight))
-            t_sensor.start()
-            threads.append(t_sensor)
-            
+            threads.append(self.safe_thread(handle_sensor_data, "센서", self.arduino_sensor, self.tts, self.arduino_weight))
+
         if self.arduino_weight:
-            t_weight = threading.Thread(target=handle_weight_data, args=(self.arduino_weight, self.arduino_rfid))
-            t_weight.start()
-            threads.append(t_weight)
+            threads.append(self.safe_thread(handle_weight_data, "무게", self.arduino_weight, self.arduino_rfid))
 
         if self.arduino_rfid:
-            t_rfid = threading.Thread(target=handle_rfid_data, args=(self.arduino_rfid, self.tts))
-            t_rfid.start()
-            threads.append(t_rfid)
+            threads.append(self.safe_thread(handle_rfid_data, "RFID", self.arduino_rfid, self.tts))
+            
+         # ✅ 버튼 TTS 기능 스레드 실행 (self.tts 전달)
+        threads.append(self.safe_thread(button_listener, "버튼", self.tts))
+
+        for t in threads:
+            t.start()
 
         for t in threads:
             t.join()
 
 if __name__ == "__main__":
-    cart = SmartCart()
-    cart.run_logic()
+    try:
+        cart = SmartCart()
+        cart.run_logic()
+    except Exception as e:
+        print("💥 실행 중 오류 발생:", e)
+        import traceback
+        traceback.print_exc()
