@@ -1,7 +1,7 @@
 # input/arduino_sensor_reader.py
 import time
 
-def handle_sensor_data(ser, tts, arduino_weight,, pause_flag):
+def handle_sensor_data(ser, tts, arduino_weight, pause_flag):
     try:
        while True:
             if pause_flag.is_set():

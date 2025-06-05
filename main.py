@@ -65,16 +65,19 @@ class SmartCart:
                 name="센서스레드"
             ).start()
 
-        # ✅ 버튼 스레드
-        threading.Thread(
-            target=button_listener,
-            args=(self.tts, self.pause_flag),
-            name="버튼스레드"
-        ).start()
+        # # ✅ 버튼 스레드
+        # threading.Thread(
+        #     target=button_listener,
+        #     args=(self.tts, self.pause_flag),
+        #     name="버튼스레드"
+        # ).start()
 
         # ✅ 무게 → RFID
         if self.arduino_weight and self.arduino_rfid:
             handle_weight_data(self.arduino_weight, self.arduino_rfid)
+        
+        if self.arduino_rfid:
+            handle_rfid_data(self.arduino_rfid, self.tts)
 
 
 if __name__ == "__main__":

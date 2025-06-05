@@ -13,6 +13,7 @@ current_uids = set()
 def handle_rfid_data(arduino_rfid, tts):
     while True:
         rfid_data = arduino_rfid.readline().decode('utf-8').strip()
+        print(rfid_data)
 
         if not rfid_data:
             continue
