@@ -14,7 +14,6 @@ from input.button import button_listener
 class SmartCart:
     def __init__(self):
         self.tts = TTS()
-        self.pause_flag = threading.Event()
 
         # ✅ Flask 웹 서버 실행
         try:
@@ -61,16 +60,9 @@ class SmartCart:
         if self.arduino_sensor and self.arduino_weight:
             threading.Thread(
                 target=handle_sensor_data,
-                args=(self.arduino_sensor, self.tts, self.arduino_weight, self.pause_flag),
+                args=(self.arduino_sensor, self.tts, self.arduino_weight),
                 name="센서스레드"
             ).start()
-
-        # # ✅ 버튼 스레드
-        # threading.Thread(
-        #     target=button_listener,
-        #     args=(self.tts, self.pause_flag),
-        #     name="버튼스레드"
-        # ).start()
 
         # ✅ 무게 → RFID
         if self.arduino_weight and self.arduino_rfid:

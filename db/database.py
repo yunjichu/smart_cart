@@ -2,7 +2,7 @@
 import sqlite3
 import datetime
 
-DATABASE = r'C:\Users\chu\Desktop\smart_cart-1\db\capstone.sqlite3'
+DATABASE = r'/home/rpi4/Desktop/smart_cart/db/capstone.sqlite3'
 
 def get_db():
     """
