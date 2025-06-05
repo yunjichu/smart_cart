@@ -1,12 +1,10 @@
 import time
 from gtts import gTTS
-import pygame
 import os
 
 class TTS:
     def __init__(self, lang='ko'):
         self.lang = lang
-        pygame.mixer.init()
 
     def speak(self, text):
         try:
@@ -14,10 +12,8 @@ class TTS:
             filename = f"/tmp/tts_{int(time.time())}.mp3"
             tts.save(filename)
 
-            pygame.mixer.music.load(filename)
-            pygame.mixer.music.play()
-            while pygame.mixer.music.get_busy():
-                time.sleep(0.1)
+            # VLC를 사용하여 재생
+            os.system(f"cvlc --play-and-exit {filename}")
 
             os.remove(filename)
 

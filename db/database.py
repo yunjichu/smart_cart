@@ -2,6 +2,8 @@
 import sqlite3
 import datetime
 
+DATABASE = r'C:\Users\chu\Desktop\smart_cart-1\db\capstone.sqlite3'
+
 def get_db():
     """
     SQLite 데이터베이스에 연결하는 함수
@@ -118,10 +120,28 @@ def remove_from_cart_by_uid(uid):
         
 def get_todays_events():
     conn = get_db()
-    today = datetime.date.today().isoformat()
-    cursor = conn.execute(
-        "SELECT event_name, discount_info FROM events WHERE event_date = ?", (today,)
-    )
-    results = cursor.fetchall()
+    today = datetime.date.today()
+
+    cursor = conn.execute("""
+        SELECT i.item_name, e.origin_price, e.event_price, e.event_rate, e.event_period
+        FROM event e
+        JOIN item i ON e.item_num = i.item_num
+    """)
+    all_events = cursor.fetchall()
     conn.close()
-    return results
+
+    todays_events = []
+
+    for item_name, origin_price, event_price, event_rate, event_period in all_events:
+        try:
+            start_str, end_str = event_period.split('~')
+            start_date = datetime.datetime.strptime(start_str.strip(), "%Y-%m-%d").date()
+            end_date = datetime.datetime.strptime(end_str.strip(), "%Y-%m-%d").date()
+
+            if start_date <= today <= end_date:
+                todays_events.append((item_name, origin_price, event_price, event_rate, event_period))
+        except ValueError:
+            # 날짜 형식이 잘못된 경우 건너뜀
+            continue
+
+    return todays_events

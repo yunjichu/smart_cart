@@ -14,6 +14,7 @@ from input.button import button_listener
 class SmartCart:
     def __init__(self):
         self.tts = TTS()
+        self.pause_flag = threading.Event()
 
         # ✅ Flask 웹 서버 실행
         try:
@@ -53,35 +54,28 @@ class SmartCart:
             print("❌ 무게 보드 연결 실패:", e)
             self.arduino_weight = None
 
-    def safe_thread(self, target, name, *args):
-        def wrapper():
-            try:
-                print(f"🔁 {name} 스레드 시작")
-                target(*args)
-            except Exception as e:
-                print(f"❌ {name} 스레드 오류:", e)
-        return threading.Thread(target=wrapper, name=name)
+    
 
     def run_logic(self):
-        threads = []
+         # ✅ 센서 스레드
+        if self.arduino_sensor and self.arduino_weight:
+            threading.Thread(
+                target=handle_sensor_data,
+                args=(self.arduino_sensor, self.tts, self.arduino_weight, self.pause_flag),
+                name="센서스레드"
+            ).start()
 
-        if self.arduino_sensor:
-            threads.append(self.safe_thread(handle_sensor_data, "센서", self.arduino_sensor, self.tts, self.arduino_weight))
+        # ✅ 버튼 스레드
+        threading.Thread(
+            target=button_listener,
+            args=(self.tts, self.pause_flag),
+            name="버튼스레드"
+        ).start()
 
-        if self.arduino_weight:
-            threads.append(self.safe_thread(handle_weight_data, "무게", self.arduino_weight, self.arduino_rfid))
+        # ✅ 무게 → RFID
+        if self.arduino_weight and self.arduino_rfid:
+            handle_weight_data(self.arduino_weight, self.arduino_rfid)
 
-        if self.arduino_rfid:
-            threads.append(self.safe_thread(handle_rfid_data, "RFID", self.arduino_rfid, self.tts))
-            
-         # ✅ 버튼 TTS 기능 스레드 실행 (self.tts 전달)
-        threads.append(self.safe_thread(button_listener, "버튼", self.tts))
-
-        for t in threads:
-            t.start()
-
-        for t in threads:
-            t.join()
 
 if __name__ == "__main__":
     try:
