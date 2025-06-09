@@ -15,10 +15,10 @@ def handle_sensor_data(ser, tts, arduino_weight):
                 continue
             
             line = ser.readline().decode('utf-8').strip()
-            print(f"📡 센서 수신 데이터: {line}")
+            print(f"센서 수신 데이터: {line}")
 
             if line.startswith("Button"):
-                print("🔘 버튼이 눌렸습니다.")
+                print("버튼이 눌렸습니다.")
                 events = get_todays_events()
 
                 if not events:
@@ -45,7 +45,7 @@ def handle_sensor_data(ser, tts, arduino_weight):
                 arduino_weight.write(b"Hands off\n")
                 arduino_weight.flush()
             else:
-                print("❌ 예상된 센서 형식이 아닙니다:", line)
+                print("예상된 센서 형식이 아닙니다:", line)
     except Exception as e:
         print(" 센서 데이터 처리 오류:", e) 
 

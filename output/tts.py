@@ -18,4 +18,4 @@ class TTS:
             os.remove(filename)
 
         except Exception as e:
-            print("❌ TTS 오류:", e)
+            print("TTS 오류:", e)

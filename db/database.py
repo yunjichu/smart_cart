@@ -21,9 +21,20 @@ def enable_foreign_keys():
     conn.execute('PRAGMA foreign_keys = ON')
     conn.commit()
     conn.close()
+    
+def get_cart_uids(cart_num=1):
+    """
+    장바구니에 있는 모든 UID(item_num) 목록 조회
+    """
+    conn = get_db()
+    try:
+        rows = conn.execute('SELECT item_num FROM cart WHERE cart_num = ?', (cart_num,)).fetchall()
+        return [row['item_num'] for row in rows]
+    finally:
+        conn.close()
 
 def add_to_cart_by_uid(uid):
-    print(f"🛒 UID {uid}를 DB에 추가 중...")
+    print(f"UID {uid}를 DB에 추가 중...")
     """카트에 UID 추가하는 함수"""
     conn = get_db()
     try:
@@ -36,6 +47,29 @@ def add_to_cart_by_uid(uid):
         print(f"[DB] UID {uid} 카트에 추가 완료")
     except sqlite3.Error as e:
         print(f"[DB 오류] {e}")
+    finally:
+        conn.close()
+
+def remove_from_cart_by_uid(uid):
+    print(f"UID {uid}를 장바구니에서 제거 중...")
+    """카트에 UID 제거거하는 함수"""
+    conn = get_db()
+    try:
+        row = conn.execute('SELECT quantity FROM cart WHERE cart_num = ? AND item_num = ?', (1, uid)).fetchone()
+        if row:
+            if row['quantity'] > 1:
+                conn.execute('UPDATE cart SET quantity = quantity - 1 WHERE cart_num = ? AND item_num = ?', (1, uid))
+            else:
+                conn.execute('DELETE FROM cart WHERE cart_num = ? AND item_num = ?', (1, uid))
+            conn.commit()
+            print(f"[DB] UID {uid} 제거 성공")
+            return True
+        else:
+            print(f"[DB] UID {uid} 장바구니에 없음")
+            return False
+    except sqlite3.Error as e:
+        print(f"[DB 오류] {e}")
+        return False
     finally:
         conn.close()
 
@@ -93,28 +127,6 @@ def add_or_update_event(data):
         return True, None
     except sqlite3.Error as e:
         return False, str(e)
-    finally:
-        conn.close()
-
-def remove_from_cart_by_uid(uid):
-    print(f"🗑️ UID {uid}를 장바구니에서 제거 중...")
-    conn = get_db()
-    try:
-        row = conn.execute('SELECT quantity FROM cart WHERE cart_num = ? AND item_num = ?', (1, uid)).fetchone()
-        if row:
-            if row['quantity'] > 1:
-                conn.execute('UPDATE cart SET quantity = quantity - 1 WHERE cart_num = ? AND item_num = ?', (1, uid))
-            else:
-                conn.execute('DELETE FROM cart WHERE cart_num = ? AND item_num = ?', (1, uid))
-            conn.commit()
-            print(f"[DB] UID {uid} 제거 성공")
-            return True
-        else:
-            print(f"[DB] UID {uid} 장바구니에 없음")
-            return False
-    except sqlite3.Error as e:
-        print(f"[DB 오류] {e}")
-        return False
     finally:
         conn.close()
         

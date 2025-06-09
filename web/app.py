@@ -13,7 +13,6 @@ from database import get_db, enable_foreign_keys, add_or_update_event, get_item_
 
 app = Flask(__name__)
 #DATABASE = r'/home/rpi4/Desktop/smart_cart/db/capstone.sqlite3'
-DATABASE = r'C:\Users\chu\Desktop\smart_cart-1\db\capstone.sqlite3'
 
 @app.route('/')
 def index():

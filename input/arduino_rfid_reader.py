@@ -5,12 +5,13 @@ import requests
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'db')))
 
-from database import add_to_cart_by_uid, get_item_info_by_rfid, remove_from_cart_by_uid  # DB 함수 사용
+from database import get_cart_uids, add_to_cart_by_uid, remove_from_cart_by_uid, get_item_info_by_rfid  # DB 함수 사용
 
-# 🧾 현재 장바구니 UID 상태
-current_uids = set()
+# RFID 리딩 시점에서 감지한 UID
+scanned_uid = None
 
 def handle_rfid_data(arduino_rfid, tts):
+    global scanned_uid
     while True:
         rfid_data = arduino_rfid.readline().decode('utf-8').strip()
         print(rfid_data)
@@ -27,15 +28,16 @@ def handle_rfid_data(arduino_rfid, tts):
             reader = parts[0]
             action = parts[1]
             uid = parts[2]
+            
             item = get_item_info_by_rfid(uid)
             if item:
-                item_name = item["item_name"]       
-                     
+                item_name = item["item_name"]  
+
             if action == "ADD":
-                if uid not in current_uids:
-                    current_uids.add(uid)
+                cart_uids = set(get_cart_uids())
+                if uid not in cart_uids:
                     add_to_cart_by_uid(uid)
-                    
+
                     if item:
                         item_expiry = item["item_exp"]
                         item_storage = item["item_storage"]
@@ -43,17 +45,17 @@ def handle_rfid_data(arduino_rfid, tts):
                     else:
                         tts.speak("등록되지 않은 물품입니다.")
                 else:
-                    print(f"[무시됨] {item_name} 이미 장바구니에 있음")
-
-            elif action == "REMOVE":
-                if uid in current_uids:
-                    current_uids.remove(uid)
-                    remove_from_cart_by_uid(uid)
-                    tts.speak(f"{item_name}가장바구니에서 제거되었습니다.")
-                else:
                     print(f"[무시됨] {item_name} 장바구니에 없음")
 
+            elif action == "REMOVE":
+                scanned_uid = uid
+                cart_uids = set(get_cart_uids())
+                for uid_in_cart in cart_uids:
+                    if uid_in_cart != scanned_uid:
+                        remove_from_cart_by_uid(uid_in_cart)
+                        item = get_item_info_by_rfid(uid_in_cart)
+                        if item:
+                            item_name = item["item_name"]
+                            tts.speak(f"{item_name}이 장바구니에서 제거되었습니다.")
         else:
             print(f"[경고] 알 수 없는 형식: {rfid_data}")
-        
-        break
