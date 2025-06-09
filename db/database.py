@@ -2,7 +2,8 @@
 import sqlite3
 import datetime
 
-DATABASE = r'/home/rpi4/Desktop/smart_cart/db/capstone.sqlite3'
+#DATABASE = r'/home/rpi4/Desktop/smart_cart/db/capstone.sqlite3'
+DATABASE = r'C:\Users\chu\Desktop\smart_cart\db\capstone.sqlite3'
 
 def get_db():
     """
@@ -35,16 +36,15 @@ def get_cart_uids(cart_num=1):
 
 def add_to_cart_by_uid(uid):
     print(f"UID {uid}를 DB에 추가 중...")
-    """카트에 UID 추가하는 함수"""
     conn = get_db()
     try:
         conn.execute(''' 
             INSERT INTO cart (cart_num, item_num, quantity) 
             VALUES (?, ?, 1)
-            ON CONFLICT(cart_num, item_num) DO UPDATE SET quantity = quantity + 1
-        ''', (1, uid))  # cart_num = 1로 고정, uid는 RFID UID
+            ON CONFLICT(cart_num, item_num) DO NOTHING
+        ''', (1, uid))  # 이미 있으면 무시 (DO NOTHING)
         conn.commit()
-        print(f"[DB] UID {uid} 카트에 추가 완료")
+        print(f"[DB] UID {uid} 카트에 추가 완료 또는 이미 존재")
     except sqlite3.Error as e:
         print(f"[DB 오류] {e}")
     finally:

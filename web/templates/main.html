@@ -100,6 +100,22 @@
             padding: 10px 0;
             border-bottom: 1px solid #ddd;
         }
+
+        .pay-button {
+            font-size: 2rem;
+            padding: 20px 40px;
+            margin-top: 30px;
+            width: 100%;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+
+        .pay-button:hover {
+            background-color: #0056b3;
+        }
     </style>
 </head>
 <body>
@@ -169,6 +185,9 @@
                 ₩<span id="change">0</span>
             </div>
         </div>
+
+        <!-- ✅ 수정된 결제 버튼 -->
+        <button onclick="checkout()" class="pay-button">결제하기</button>
     </div>
 </div>
 
@@ -216,11 +235,47 @@
                 document.getElementById("total").textContent = (total + discount).toLocaleString();
                 document.getElementById("discount").textContent = discount.toLocaleString();
                 document.getElementById("final-total").textContent = total.toLocaleString();
+                document.getElementById("change").textContent = '0';
             })
             .catch(error => {
                 alert("카트를 불러오는 데 실패했습니다.");
                 console.error("Error:", error);
             });
+    }
+
+    function checkout() {
+        const cartId = document.getElementById("cart-id").value;
+        if (!cartId) {
+            alert("카트 번호를 입력하세요.");
+            return;
+        }
+
+        if (!confirm("결제를 진행하시겠습니까?")) return;
+
+        fetch(`/api/cart/${cartId}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert("결제가 완료되었습니다. 장바구니를 비웁니다.");
+
+                // 테이블 초기화
+                document.querySelector("#cart-table tbody").innerHTML = '';
+
+                // 금액 정보 초기화
+                document.getElementById("total").textContent = '0';
+                document.getElementById("discount").textContent = '0';
+                document.getElementById("final-total").textContent = '0';
+                document.getElementById("change").textContent = '0';
+            } else {
+                alert(data.error || "결제 실패");
+            }
+        })
+        .catch(error => {
+            alert("결제 중 오류가 발생했습니다.");
+            console.error("Checkout error:", error);
+        });
     }
 </script>
 
