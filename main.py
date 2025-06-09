@@ -6,10 +6,8 @@ import os
 import sys
 
 from output.tts import TTS
-from input.arduino_rfid_reader import handle_rfid_data
 from input.arduino_sensor_reader import handle_sensor_data
 from input.arduino_weight_reader import handle_weight_data
-from input.button import button_listener
 
 class SmartCart:
     def __init__(self):
@@ -66,10 +64,7 @@ class SmartCart:
 
         # ✅ 무게 → RFID
         if self.arduino_weight and self.arduino_rfid:
-            handle_weight_data(self.arduino_weight, self.arduino_rfid)
-        
-        if self.arduino_rfid:
-            handle_rfid_data(self.arduino_rfid, self.tts)
+            handle_weight_data(self.arduino_weight, self.arduino_rfid, self.tts)
 
 
 if __name__ == "__main__":

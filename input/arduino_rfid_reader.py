@@ -27,30 +27,33 @@ def handle_rfid_data(arduino_rfid, tts):
             reader = parts[0]
             action = parts[1]
             uid = parts[2]
-
+            item = get_item_info_by_rfid(uid)
+            if item:
+                item_name = item["item_name"]       
+                     
             if action == "ADD":
                 if uid not in current_uids:
                     current_uids.add(uid)
                     add_to_cart_by_uid(uid)
-
-                    item = get_item_info_by_rfid(uid)
+                    
                     if item:
-                        item_name = item["item_name"]
                         item_expiry = item["item_exp"]
                         item_storage = item["item_storage"]
                         tts.speak(f"{item_name}, 유통기한 {item_expiry}, 보관: {item_storage}")
                     else:
                         tts.speak("등록되지 않은 물품입니다.")
                 else:
-                    print(f"[무시됨] {uid} 이미 장바구니에 있음")
+                    print(f"[무시됨] {item_name} 이미 장바구니에 있음")
 
             elif action == "REMOVE":
                 if uid in current_uids:
                     current_uids.remove(uid)
                     remove_from_cart_by_uid(uid)
-                    tts.speak(f"{uid} 장바구니에서 제거되었습니다.")
+                    tts.speak(f"{item_name}가장바구니에서 제거되었습니다.")
                 else:
-                    print(f"[무시됨] {uid} 장바구니에 없음")
+                    print(f"[무시됨] {item_name} 장바구니에 없음")
 
         else:
             print(f"[경고] 알 수 없는 형식: {rfid_data}")
+        
+        break
