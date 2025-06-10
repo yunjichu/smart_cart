@@ -2,8 +2,8 @@
 import sqlite3
 import datetime
 
-#DATABASE = r'/home/rpi4/Desktop/smart_cart/db/capstone.sqlite3'
-DATABASE = r'C:\Users\chu\Desktop\smart_cart\db\capstone.sqlite3'
+DATABASE = r'/home/rpi4/Desktop/smart_cart/db/capstone.sqlite3'
+#DATABASE = r'C:\Users\chu\Desktop\smart_cart\db\capstone.sqlite3'
 
 def get_db():
     """
@@ -151,7 +151,11 @@ def get_todays_events():
             end_date = datetime.datetime.strptime(end_str.strip(), "%Y-%m-%d").date()
 
             if start_date <= today <= end_date:
-                todays_events.append((item_name, origin_price, event_price, event_rate, event_period))
+                todays_events.append(item_name)
+                todays_events.append(origin_price)
+                todays_events.append(event_price)
+                todays_events.append(event_rate)
+                todays_events.append(event_period)
         except ValueError:
             # 날짜 형식이 잘못된 경우 건너뜀
             continue

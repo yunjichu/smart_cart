@@ -20,15 +20,13 @@ def handle_sensor_data(ser, tts, arduino_weight):
             if line.startswith("Button"):
                 print("버튼이 눌렸습니다.")
                 events = get_todays_events()
-
-                if not events:
-                    tts.speak("오늘 예정된 행사가 없습니다.")
+                if events:
+                    item_name = events[0]
+                    event_price=events[2]
+                    event_rate=events[3]
+                    tts.speak(f"{item_name}은 {event_rate} 퍼센트 할인 중이며 {event_price}원입니다.")
                 else:
-                    for event in events:
-                        item_name, event_price, event_rate = event
-                        tts.speak(
-                            f"{item_name}은 {event_rate} 퍼센트 할인 중이며 {event_price}원입니다."
-                        )
+                    tts.speak("오늘 예정된 행사가 없습니다.")
                         
             if line.startswith("OBSTACLE:"):
                 direction = line.split(":")[1]
