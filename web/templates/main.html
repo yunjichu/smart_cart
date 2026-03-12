@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>마트 캐셔</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            width: 80%;
+            margin: auto;
+            padding-top: 50px;
+            display: flex;
+        }
+
+        .left-section {
+            width: 80%;
+            padding-right: 20px;
+        }
+
+        .right-section {
+            width: 20%;
+            padding-left: 20px;
+            border-left: 1px solid #ddd;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .input-section {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .input-section input {
+            font-size: 16px;
+            padding: 5px;
+        }
+
+        .button-section {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .button-section button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+        }
+
+        .button-section button:hover {
+            background-color: #0056b3;
+        }
+
+        .barcode-section {
+            margin-top: 30px;
+        }
+
+        .barcode-box {
+            width: 100%;
+            border: 1px solid #ddd;
+            padding: 10px;
+            background-color: #fff;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            border: 1px solid #ccc;
+            padding: 8px;
+            text-align: center;
+        }
+
+        .cart-summary {
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+            border: 1px solid #ddd;
+        }
+
+        .cart-summary div {
+            padding: 10px 0;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .pay-button {
+            font-size: 2rem;
+            padding: 20px 40px;
+            margin-top: 30px;
+            width: 100%;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+
+        .pay-button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="left-section">
+        <div class="header">
+            <h1>마트 캐셔</h1>
+        </div>
+
+        <!-- 카트 번호 입력 -->
+        <div class="input-section">
+            <label for="cart-id">카트 번호:</label>
+            <input type="number" id="cart-id" name="cart-id">
+            <button onclick="loadCart()">조회</button>
+        </div>
+
+        <hr>
+
+        <!-- 버튼: 물품 등록, 할인 행사 등록, 거래 내역 -->
+        <div class="button-section">
+            <a href="/items"><button>물품 등록</button></a>
+            <a href="/events"><button>할인 행사 등록</button></a>
+            <a href="/transactions"><button>거래내역</button></a>
+        </div>
+
+        <hr>
+
+        <!-- 바코드 스캔 영역 -->
+        <div class="barcode-section">
+            <div class="barcode-box">
+                <h3>바코드 스캔 결과</h3>
+                <table id="cart-table">
+                    <thead>
+                        <tr>
+                            <th>상품명</th>
+                            <th>단가</th>
+                            <th>수량</th>
+                            <th>금액</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- 물품 항목이 여기에 추가됩니다 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="right-section">
+        <!-- 결제 항목 -->
+        <div class="cart-summary">
+            <div>
+                <strong>합계</strong><br>
+                ₩<span id="total">0</span>
+            </div>
+            <div>
+                <strong>할인</strong><br>
+                ₩<span id="discount">0</span>
+            </div>
+            <div>
+                <strong>결제금액</strong><br>
+                ₩<span id="final-total">0</span>
+            </div>
+            <div>
+                <strong>거스름돈</strong><br>
+                ₩<span id="change">0</span>
+            </div>
+        </div>
+
+        <!-- ✅ 수정된 결제 버튼 -->
+        <button onclick="checkout()" class="pay-button">결제하기</button>
+    </div>
+</div>
+
+<script>
+    function loadCart() {
+        const cartId = document.getElementById("cart-id").value;
+        if (!cartId) {
+            alert("카트 번호를 입력하세요.");
+            return;
+        }
+
+        fetch(`/api/cart/${cartId}`)
+            .then(response => response.json())
+            .then(data => {
+                const tableBody = document.querySelector("#cart-table tbody");
+                tableBody.innerHTML = '';
+
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+
+                let total = 0;
+                let discount = 0;
+
+                data.forEach(item => {
+                    const row = document.createElement("tr");
+                    const unitPrice = item.final_price;
+                    const qty = item.quantity;
+                    const itemTotal = unitPrice * qty;
+                    const originalTotal = item.item_price * qty;
+
+                    row.innerHTML = `
+                        <td>${item.item_name}</td>
+                        <td>₩${unitPrice.toLocaleString()}</td>
+                        <td>${qty}</td>
+                        <td>₩${itemTotal.toLocaleString()}</td>
+                    `;
+                    tableBody.appendChild(row);
+
+                    total += itemTotal;
+                    discount += (originalTotal - itemTotal);
+                });
+
+                document.getElementById("total").textContent = (total + discount).toLocaleString();
+                document.getElementById("discount").textContent = discount.toLocaleString();
+                document.getElementById("final-total").textContent = total.toLocaleString();
+                document.getElementById("change").textContent = '0';
+            })
+            .catch(error => {
+                alert("카트를 불러오는 데 실패했습니다.");
+                console.error("Error:", error);
+            });
+    }
+
+    function checkout() {
+        const cartId = document.getElementById("cart-id").value;
+        if (!cartId) {
+            alert("카트 번호를 입력하세요.");
+            return;
+        }
+
+        if (!confirm("결제를 진행하시겠습니까?")) return;
+
+        fetch(`/api/cart/${cartId}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert("결제가 완료되었습니다. 장바구니를 비웁니다.");
+
+                // 테이블 초기화
+                document.querySelector("#cart-table tbody").innerHTML = '';
+
+                // 금액 정보 초기화
+                document.getElementById("total").textContent = '0';
+                document.getElementById("discount").textContent = '0';
+                document.getElementById("final-total").textContent = '0';
+                document.getElementById("change").textContent = '0';
+            } else {
+                alert(data.error || "결제 실패");
+            }
+        })
+        .catch(error => {
+            alert("결제 중 오류가 발생했습니다.");
+            console.error("Checkout error:", error);
+        });
+    }
+</script>
+
+</body>
+</html>
